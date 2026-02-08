@@ -4,49 +4,51 @@ import random
 # --- 1. 페이지 및 스타일 설정 ---
 st.set_page_config(page_title="Hi-Lo Mobile Optimized", layout="centered")
 
-# CSS 스타일 주입
+# 모바일 최적화 CSS (가로 스크롤 방지 및 레퍼런스 UI 반영)
 st.markdown("""
 <style>
-    /* 1. 전체 앱 여백 및 스크롤 제거 */
+    /* 전체 앱 여백 및 스크롤 제거 */
     .block-container {
-        padding-top: 1rem !important;
-        padding-bottom: 0rem !important;
-        padding-left: 0.5rem !important;
-        padding-right: 0.5rem !important;
+        padding: 0.5rem 0.2rem !important;
+        max-width: 100vw !important;
+        overflow-x: hidden !important;
     }
-    .stApp { background-color: #1e1e1e; color: white; overflow-x: hidden; }
+    .stApp { background-color: #161616; color: white; }
 
-    /* 2. 컬럼 가로 배치 강제 및 간격 축소 */
+    /* 컬럼 가로 배치 강제 및 간격 축소 */
     div[data-testid="stHorizontalBlock"] {
         display: flex !important;
         flex-direction: row !important;
         flex-wrap: nowrap !important;
         gap: 4px !important;
+        width: 100% !important;
     }
     [data-testid="column"] {
         min-width: 0px !important;
-        flex: 1 1 0% !important;
+        flex: 1 1 auto !important;
     }
 
-    /* 3. 카드 박스 크기 최적화 */
+    /* 카드 박스 레이아웃 */
     .card-box {
-        border: 1px solid #555; border-radius: 8px;
-        text-align: center; background-color: white; color: black;
-        font-weight: bold; margin: 0px;
-        display: flex; flex-direction: column; justify-content: center; align-items: center;
-        height: 110px; /* 높이 축소 */
+        border-radius: 8px; padding: 12px;
+        text-align: center; font-weight: bold;
+        height: 120px; display: flex; flex-direction: column; 
+        justify-content: center; align-items: center;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.5);
     }
-    .big-card-text { font-size: 2.2rem; line-height: 1; }
+    .deck-box { background: #2d3663; border: 1px solid #465298; color: white; }
+    .current-box { background: white; color: black; border: 1px solid #ddd; }
+    .big-card-text { font-size: 3rem; line-height: 1; }
     
-    /* 4. 히스토리 카드 (더 작게) */
+    /* 히스토리 카드 스타일 */
     .history-card {
-        border-radius: 4px; padding: 1px;
-        text-align: center; background-color: #ddd; color: black;
-        font-size: 9px; width: 100%; height: 35px;
-        display: flex; justify-content: center; align-items: center; flex-direction: column;
+        border-radius: 4px; padding: 2px;
+        text-align: center; font-size: 11px; font-weight: bold;
+        width: 100%; height: 40px;
+        display: flex; justify-content: center; align-items: center;
     }
 
-    /* 5. 버튼 스타일 최적화 (폰트 및 높이) */
+    /* 모든 버튼 공통 스타일 */
     .stButton > button {
         background-color: #0047AB !important;
         color: #FFD700 !important;
@@ -54,36 +56,41 @@ st.markdown("""
         border-radius: 6px !important;
         font-weight: bold !important;
         width: 100% !important;
-        padding: 2px !important;
-        font-size: 0.75rem !important; /* 폰트 크기 축소 */
+        padding: 4px !important;
+        font-size: 0.85rem !important;
+        transition: transform 0.1s;
     }
+    .stButton > button:active { transform: scale(0.95); }
 
+    /* 베팅 버튼 전용 */
     .bet-btn-style > button {
-        height: 65px !important;
-        line-height: 1.2 !important;
+        height: 70px !important;
+        line-height: 1.3 !important;
+        white-space: pre-wrap !important;
     }
 
-    /* 6. 칩 버튼 (가로 6개가 한 줄에 들어가도록) */
+    /* 칩 버튼 전용 (가로 6개 최적화) */
     .chip-btn-style > button {
-        border-radius: 50% !important;
-        aspect-ratio: 1 / 1;
-        height: auto !important;
-        min-width: 35px !important; /* 칩 크기 축소 */
-        font-size: 0.65rem !important;
-        background-color: #003366 !important;
+        height: 38px !important;
+        font-size: 0.7rem !important;
+        background-color: #333 !important;
+        border: 1px solid #555 !important;
+        color: white !important;
     }
 
-    /* 7. 인출 버튼 */
+    /* 인출 버튼 (강조) */
     .cashout-btn-style > button {
         background-color: #000080 !important;
-        height: 50px !important;
-        font-size: 1rem !important;
+        height: 55px !important;
+        font-size: 1.1rem !important;
+        margin: 10px 0;
     }
     
-    /* 8. 보유 머니 박스 */
+    /* 보유 머니 및 정보 섹션 */
+    .info-msg { text-align: center; color: #ffd700; font-size: 0.9rem; margin: 8px 0; font-weight: bold; }
     .balance-box {
-        background-color:#222; padding:8px; border-radius:10px;
-        text-align:center; border: 1px solid #444; margin-top: 5px;
+        background-color:#222; padding:12px; border-radius:12px;
+        text-align:center; border: 1px solid #444; margin-top: 10px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -235,106 +242,73 @@ def process_bet(bet_type):
         reset_game_state()
 
 
-# --- 3. 화면 구성 ---
+# --- 3. UI 구성 ---
+st.markdown("<h2 style='text-align:center; color:#ffd700; margin:0;'>HI-LO</h2>", unsafe_allow_html=True)
 
-# (0) 상단 타이틀
-st.markdown("""
-<div class='title-container'>
-    <h1 style='font-size: 48px; font-weight: bold; margin: 0; color: #ffd700; text-shadow: 2px 2px 4px #000000;'>HI-LO</h1>
-</div>
-""", unsafe_allow_html=True)
-
-# (1) 히스토리 영역
-st.markdown("### Previous Cards")
-hist_cols = st.columns(7)
+# 히스토리 (7칸)
+st.caption("Previous Cards")
+h_cols = st.columns(7)
 cur_r, cur_s, cur_c = get_card_display(st.session_state.current_card[0], st.session_state.current_card[1])
-with hist_cols[0]:
-    st.markdown(f"<div class='history-card' style='border: 2px solid gold; background: white; color:{cur_c}'><span>{cur_s}</span><span>{cur_r}</span></div>", unsafe_allow_html=True)
-    st.caption("Current")
-
+with h_cols[0]:
+    st.markdown(f"<div class='history-card' style='background:white; color:{cur_c}; border: 2px solid gold;'>{cur_s}{cur_r}</div>", unsafe_allow_html=True)
 for i, card in enumerate(st.session_state.history[:6]):
     hr, hs, hc = get_card_display(card[0], card[1])
-    with hist_cols[i+1]:
-        st.markdown(f"<div class='history-card' style='color:{hc}'><span>{hs}</span><span>{hr}</span></div>", unsafe_allow_html=True)
+    with h_cols[i+1]:
+        st.markdown(f"<div class='history-card' style='background:#ddd; color:{hc};'>{hs}{hr}</div>", unsafe_allow_html=True)
 
-st.divider()
-
-# (2) 메인 게임 영역 (Deck & Current Card)
-c1, c2 = st.columns([1, 1]) 
+# 메인 카드 섹션
+st.write("")
+c1, c2 = st.columns(2)
 with c1:
-    st.markdown(f"""
-    <div class='card-box' style='background: repeating-linear-gradient(45deg, #606dbc, #606dbc 10px, #465298 10px, #465298 20px); color: white;'>
-        <div style='font-size:36px; font-weight:bold;'>Deck</div>
-        <div style='font-size: 20px; margin-top: 10px;'>{len(st.session_state.deck)} left</div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f"<div class='card-box deck-box'><span style='font-size:1.2rem;'>Deck</span><br>{len(st.session_state.deck)} left</div>", unsafe_allow_html=True)
 with c2:
-    st.markdown(f"""
-    <div class='card-box' style='color: {cur_c};'>
-        <div class='big-card-text'>{cur_s}<br>{cur_r}</div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f"<div class='card-box current-box'><div class='big-card-text'>{cur_s}{cur_r}</div></div>", unsafe_allow_html=True)
 
-# 게임 메시지
-st.markdown(f"<h4 style='text-align:center; color:#ffd700; margin: 10px 0;'>{st.session_state.game_message}</h4>", unsafe_allow_html=True)
+st.markdown(f"<div class='info-msg'>{st.session_state.game_message}</div>", unsafe_allow_html=True)
 
-# (3) 베팅 컨트롤 영역
-current_rank = st.session_state.current_card[0]
-odds_1, odds_2 = calculate_odds(current_rank)
-curr_pot = st.session_state.current_pot
-next_pot_1 = int(curr_pot * odds_1)
-next_pot_2 = int(curr_pot * odds_2)
-next_pot_rb = int(curr_pot * 1.95)
-
-if current_rank == 14: 
-    label_1 = "동일 (Same)"
-    label_2 = "미만 (Under)"
-else:
-    label_1 = "초과 (Over)"
-    label_2 = "미만 (Under)"
-
-b_col1, b_col2 = st.columns([1, 1]) 
-
+# 베팅 컨트롤
+o1, o2 = calculate_odds(st.session_state.current_card[0])
+label_1 = "Over (Same)" if st.session_state.current_card[0] < 14 else "Same (A)"
+b_col1, b_col2 = st.columns(2)
 with b_col1:
     st.markdown('<div class="bet-btn-style">', unsafe_allow_html=True)
-    if st.button(f"{label_1}\nx{odds_1}\nGet: {next_pot_1:,}", key="bet_hi"): process_bet("Hi"); st.rerun()
-    if st.button(f"Black (♠♣)\nx1.95\nGet: {next_pot_rb:,}", key="bet_black"): process_bet("Black"); st.rerun()
+    if st.button(f"{label_1}\nx{o1}\nGet: {int(st.session_state.current_pot*o1):,}", key="hi"): process_bet("Hi"); st.rerun()
+    if st.button(f"Black (♠♣)\nx1.95\nGet: {int(st.session_state.current_pot*1.95):,}", key="bl"): process_bet("Black"); st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
-
 with b_col2:
     st.markdown('<div class="bet-btn-style">', unsafe_allow_html=True)
-    if st.button(f"{label_2}\nx{odds_2}\nGet: {next_pot_2:,}", key="bet_lo"): process_bet("Lo"); st.rerun()
-    if st.button(f"Red (♥♦)\nx1.95\nGet: {next_pot_rb:,}", key="bet_red"): process_bet("Red"); st.rerun()
+    if st.button(f"Under\nx{o2}\nGet: {int(st.session_state.current_pot*o2):,}", key="lo"): process_bet("Lo"); st.rerun()
+    if st.button(f"Red (♥♦)\nx1.95\nGet: {int(st.session_state.current_pot*1.95):,}", key="re"): process_bet("Red"); st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-# (4) 인출(Cash Out) 버튼
-st.markdown('<div class="cashout-container"><div style="width: 50%;">', unsafe_allow_html=True)
+# 인출 버튼
 st.markdown('<div class="cashout-btn-style">', unsafe_allow_html=True)
-cashout_label = f"₩ {st.session_state.current_pot:,}\nIN CHUL (인출)"
-if st.button(cashout_label, key="cash_out"):
-    cash_out()
-    st.rerun()
-st.markdown('</div></div></div>', unsafe_allow_html=True)
+if st.button(f"₩ {st.session_state.current_pot:,} IN CHUL (인출)"):
+    if st.session_state.current_pot > 0:
+        win = st.session_state.current_pot
+        st.session_state.balance += win
+        st.session_state.game_message = f"성공! {win:,}원 인출 완료"
+        reset_game_state()
+        st.rerun()
+st.markdown('</div>', unsafe_allow_html=True)
 
-# (5) 칩 선택 영역
-st.markdown("<div style='text-align:center; margin-bottom: 5px;'>", unsafe_allow_html=True)
-st.markdown(f"**칩을 눌러 금액 추가** (즉시 차감)", unsafe_allow_html=True)
-
+# 칩 섹션
+st.markdown("<p style='text-align:center; font-size:0.75rem; margin:0;'>칩을 눌러 베팅금 추가</p>", unsafe_allow_html=True)
 chip_cols = st.columns(6)
-chips = [1000, 5000, 10000, 50000, 100000, 500000]
-for i, amount in enumerate(chips):
+for i, amt in enumerate([1000, 5000, 10000, 50000, 100000, 500000]):
     with chip_cols[i]:
-        st.markdown('<div class="chip-container"><div class="chip-btn-style">', unsafe_allow_html=True)
-        if st.button(f"+{amount//1000}k", key=f"chip_{amount}"):
-            add_chip(amount)
-            st.rerun()
-        st.markdown('</div></div>', unsafe_allow_html=True)
-st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown('<div class="chip-btn-style">', unsafe_allow_html=True)
+        if st.button(f"+{amt//1000}k", key=f"c_{amt}"):
+            if st.session_state.balance >= amt:
+                st.session_state.balance -= amt
+                st.session_state.current_pot += amt
+                st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
-# (6) 보유 머니
+# 보유 머니
 st.markdown(f"""
 <div class='balance-box'>
-    <span style='font-size:18px; color:#aaa;'>보유 머니 (Balance)</span><br>
-    <span style='font-size:36px; color:#4CAF50; font-weight:bold;'>₩ {st.session_state.balance:,}</span>
+    <span style='color:#aaa; font-size:0.8rem;'>보유 머니 (Balance)</span><br>
+    <span style='font-size:1.8rem; color:#4CAF50; font-weight:bold;'>₩ {st.session_state.balance:,}</span>
 </div>
 """, unsafe_allow_html=True)
