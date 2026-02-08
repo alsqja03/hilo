@@ -1,8 +1,9 @@
 import streamlit as st
 import random
+import time
 
 # --- 1. 페이지 및 스타일 설정 ---
-st.set_page_config(page_title="Hi-Lo", layout="centered")
+st.set_page_config(page_title="Evolution Style Hi-Lo", layout="centered")
 
 # CSS 스타일 주입
 st.markdown("""
@@ -16,7 +17,7 @@ st.markdown("""
         border-bottom: 2px solid #333; padding-bottom: 10px;
     }
     
-    /* 카드 박스 (Deck & Current Card) */
+    /* 카드 박스 */
     .card-box {
         border: 2px solid #ddd; border-radius: 10px; padding: 10px;
         text-align: center; background-color: white; color: black;
@@ -35,27 +36,25 @@ st.markdown("""
         justify-content: center; align-items: center; flex-direction: column;
     }
     
-    /* [핵심] 모든 버튼 기본 스타일: 진한 파랑 배경 + 노란색 글씨 */
+    /* 버튼 스타일 (파랑 배경 + 노랑 글씨) */
     .stButton > button {
-        background-color: #0047AB !important; /* Cobalt Blue */
-        color: #FFD700 !important; /* Gold Text */
-        border: 2px solid #FFD700 !important; /* Gold Border */
+        background-color: #0047AB !important;
+        color: #FFD700 !important;
+        border: 2px solid #FFD700 !important;
         border-radius: 10px !important;
         font-weight: bold !important;
-        opacity: 1 !important; /* 투명도 제거 (항상 보이게) */
+        opacity: 1 !important;
         transition: all 0.2s ease !important;
         box-shadow: 0 4px 6px rgba(0,0,0,0.3) !important;
     }
-    
-    /* 마우스 호버 효과: 밝은 파랑 + 흰색 글씨 */
     .stButton > button:hover {
-        background-color: #4169E1 !important; /* Royal Blue */
+        background-color: #4169E1 !important;
         color: #FFFFFF !important;
         border-color: #FFFFFF !important;
         transform: scale(1.02);
     }
 
-    /* 베팅 버튼 전용 스타일 (높이 조절) */
+    /* 베팅 버튼 전용 */
     .bet-btn-style { margin-bottom: 5px; }
     .bet-btn-style > button {
         height: 100px !important;
@@ -64,15 +63,15 @@ st.markdown("""
         width: 100% !important;
     }
 
-    /* 칩 버튼 전용 스타일 */
+    /* 칩 버튼 전용 */
     .chip-container { margin-top: 5px; margin-bottom: 10px; }
     .chip-btn-style > button {
-        border-radius: 50% !important; /* 원형 */
+        border-radius: 50% !important;
         height: 70px !important;
         width: 100% !important;
         font-size: 16px !important;
         padding: 0 !important;
-        background-color: #003366 !important; /* 더 어두운 파랑 */
+        background-color: #003366 !important;
         color: white !important;
         border: 2px solid #777 !important;
     }
@@ -82,22 +81,18 @@ st.markdown("""
         border-color: #FFD700 !important;
     }
 
-    /* 인출(Cash Out) 버튼 스타일 (강조) */
+    /* 인출 버튼 전용 */
     .cashout-container {
         display: flex; justify-content: center; 
         margin-top: 10px; margin-bottom: 10px;
     }
     .cashout-btn-style > button {
-        background-color: #000080 !important; /* Navy */
+        background-color: #000080 !important;
         color: #FFD700 !important;
         border: 3px solid #FFD700 !important;
         height: 80px !important;
         font-size: 24px !important;
         box-shadow: 0 0 15px rgba(0, 71, 171, 0.6) !important;
-    }
-    .cashout-btn-style > button:hover {
-        background-color: #1E90FF !important; /* Dodger Blue */
-        box-shadow: 0 0 25px rgba(30, 144, 255, 0.8) !important;
     }
     
     /* 보유 머니 박스 */
@@ -114,7 +109,7 @@ st.markdown("""
 SUITS = ['♠', '♣', '♥', '♦']
 RED_SUITS = ['♥', '♦']
 BLACK_SUITS = ['♠', '♣']
-RANKS = list(range(2, 15)) # 2~14 (Ace=14)
+RANKS = list(range(2, 15))
 RANK_MAP = {11: 'J', 12: 'Q', 13: 'K', 14: 'A'}
 
 def get_card_display(rank, suit):
@@ -132,16 +127,18 @@ def create_deck(num_decks=2):
     return deck
 
 def reset_game_state():
-    """게임을 재시작 (덱, 현재 카드 리셋). 보유머니는 유지."""
+    """게임을 재시작. 보유머니는 유지."""
     st.session_state.deck = create_deck(2)
     st.session_state.current_card = st.session_state.deck.pop()
     st.session_state.history = []
     st.session_state.current_pot = 0 
+    st.session_state.bust_state = False # 버스트 상태 해제
 
 # 세션 상태 초기화
 if 'deck' not in st.session_state:
     st.session_state.balance = 1000000
-    st.session_state.current_pot = 0 
+    st.session_state.current_pot = 0
+    st.session_state.bust_state = False # 버스트 상태 플래그
     reset_game_state()
     st.session_state.game_message = "게임을 시작합니다. 칩을 눌러 베팅하세요."
 
@@ -170,10 +167,10 @@ def calculate_odds(current_rank):
     low_count = len([c for c in remaining if c[0] < current_rank])
     same_count = len([c for c in remaining if c[0] == current_rank])
 
-    if current_rank == 14: # Ace 특수 룰
+    if current_rank == 14: # Ace
         prob_1 = same_count / total if total > 0 else 0
         prob_2 = low_count / total if total > 0 else 0
-    else: # 일반 룰 (Tie 포함)
+    else: # Normal
         prob_1 = (high_count + same_count) / total if total > 0 else 0
         prob_2 = (low_count + same_count) / total if total > 0 else 0
 
@@ -183,25 +180,28 @@ def calculate_odds(current_rank):
     return min(odds_1, 50.0), min(odds_2, 50.0)
 
 def add_chip(amount):
+    if st.session_state.bust_state: return # 버스트 상태면 조작 불가
     if st.session_state.balance >= amount:
         st.session_state.balance -= amount
         st.session_state.current_pot += amount
         st.session_state.game_message = "베팅 진행 중..."
     else:
-        st.session_state.game_message = "잔액이 부족합니다."
+        st.session_state.game_message = "잔액이 부족합니다!"
 
 def cash_out():
+    if st.session_state.bust_state: return
     if st.session_state.current_pot > 0:
         win_amount = st.session_state.current_pot
         st.session_state.balance += win_amount
-        st.session_state.game_message = f"이기셨습니다. (+{win_amount:,}원)"
+        st.session_state.game_message = f"인출 완료! (+{win_amount:,}원)"
         reset_game_state()
     else:
         st.session_state.game_message = "인출할 금액이 없습니다."
 
 def process_bet(bet_type):
+    if st.session_state.bust_state: return
     if st.session_state.current_pot <= 0:
-        st.session_state.game_message = "칩을 먼저 선택해 주세요."
+        st.session_state.game_message = "칩을 먼저 선택해 주세요!"
         return
 
     current_card = st.session_state.current_card
@@ -217,6 +217,7 @@ def process_bet(bet_type):
     win = False
     payout_mult = 0.0
 
+    # 승리 조건 체크
     if current_rank == 14: # Ace
         if bet_type == "Hi": # Same
             payout_mult = odds_1
@@ -242,18 +243,28 @@ def process_bet(bet_type):
     cur_r_disp, cur_s_disp, _ = get_card_display(next_rank, next_suit)
     card_disp = f"{cur_s_disp}{cur_r_disp}"
 
+    # 승패 처리
     if win:
         new_pot = int(st.session_state.current_pot * payout_mult)
         st.session_state.current_pot = new_pot
-        st.session_state.game_message = f"현재 인출가능 금액: {new_pot:,}원"
+        
+        # [수정] 성공 메시지 형식: ₩ 15,000, x1.5
+        st.session_state.game_message = f"적중! ₩ {new_pot:,}, x{payout_mult}"
         
         st.session_state.history.insert(0, current_card)
         if len(st.session_state.history) > 6:
             st.session_state.history.pop()
         st.session_state.current_card = next_card
     else:
-        st.session_state.game_message = f"버스트 ({card_disp})"
-        reset_game_state()
+        # [수정] 버스트 처리: 카드는 보여주되, 상태 플래그 설정
+        st.session_state.bust_state = True
+        st.session_state.game_message = f"버스트(Bust)! {card_disp}"
+        
+        # 카드를 업데이트해서 화면에 결과 카드를 보여줌
+        st.session_state.history.insert(0, current_card)
+        if len(st.session_state.history) > 6:
+            st.session_state.history.pop()
+        st.session_state.current_card = next_card
 
 
 # --- 3. 화면 구성 ---
@@ -280,7 +291,7 @@ for i, card in enumerate(st.session_state.history[:6]):
 
 st.divider()
 
-# (2) 메인 게임 영역 (Deck & Current Card)
+# (2) 메인 게임 영역
 c1, c2 = st.columns([1, 1]) 
 with c1:
     st.markdown(f"""
@@ -297,7 +308,8 @@ with c2:
     """, unsafe_allow_html=True)
 
 # 게임 메시지
-st.markdown(f"<h4 style='text-align:center; color:#ffd700; margin: 10px 0;'>{st.session_state.game_message}</h4>", unsafe_allow_html=True)
+msg_color = "#ff4444" if st.session_state.bust_state else "#ffd700"
+st.markdown(f"<h4 style='text-align:center; color:{msg_color}; margin: 10px 0;'>{st.session_state.game_message}</h4>", unsafe_allow_html=True)
 
 # (3) 베팅 컨트롤 영역
 current_rank = st.session_state.current_card[0]
@@ -318,21 +330,29 @@ b_col1, b_col2 = st.columns([1, 1])
 
 with b_col1:
     st.markdown('<div class="bet-btn-style">', unsafe_allow_html=True)
-    if st.button(f"{label_1}\nx{odds_1}\nGet: {next_pot_1:,}", key="bet_hi"): process_bet("Hi"); st.rerun()
-    if st.button(f"Black (♠♣)\nx1.95\nGet: {next_pot_rb:,}", key="bet_black"): process_bet("Black"); st.rerun()
+    if st.button(f"{label_1}\nx{odds_1}\nGet: {next_pot_1:,}", key="bet_hi", disabled=st.session_state.bust_state): 
+        process_bet("Hi")
+        st.rerun()
+    if st.button(f"Black (♠♣)\nx1.95\nGet: {next_pot_rb:,}", key="bet_black", disabled=st.session_state.bust_state): 
+        process_bet("Black")
+        st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
 with b_col2:
     st.markdown('<div class="bet-btn-style">', unsafe_allow_html=True)
-    if st.button(f"{label_2}\nx{odds_2}\nGet: {next_pot_2:,}", key="bet_lo"): process_bet("Lo"); st.rerun()
-    if st.button(f"Red (♥♦)\nx1.95\nGet: {next_pot_rb:,}", key="bet_red"): process_bet("Red"); st.rerun()
+    if st.button(f"{label_2}\nx{odds_2}\nGet: {next_pot_2:,}", key="bet_lo", disabled=st.session_state.bust_state): 
+        process_bet("Lo")
+        st.rerun()
+    if st.button(f"Red (♥♦)\nx1.95\nGet: {next_pot_rb:,}", key="bet_red", disabled=st.session_state.bust_state): 
+        process_bet("Red")
+        st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
 # (4) 인출(Cash Out) 버튼
 st.markdown('<div class="cashout-container"><div style="width: 50%;">', unsafe_allow_html=True)
 st.markdown('<div class="cashout-btn-style">', unsafe_allow_html=True)
 cashout_label = f"₩ {st.session_state.current_pot:,}\nIN CHUL (인출)"
-if st.button(cashout_label, key="cash_out"):
+if st.button(cashout_label, key="cash_out", disabled=st.session_state.bust_state):
     cash_out()
     st.rerun()
 st.markdown('</div></div></div>', unsafe_allow_html=True)
@@ -346,7 +366,7 @@ chips = [1000, 5000, 10000, 50000, 100000, 500000]
 for i, amount in enumerate(chips):
     with chip_cols[i]:
         st.markdown('<div class="chip-container"><div class="chip-btn-style">', unsafe_allow_html=True)
-        if st.button(f"+{amount//1000}k", key=f"chip_{amount}"):
+        if st.button(f"+{amount//1000}k", key=f"chip_{amount}", disabled=st.session_state.bust_state):
             add_chip(amount)
             st.rerun()
         st.markdown('</div></div>', unsafe_allow_html=True)
@@ -359,3 +379,10 @@ st.markdown(f"""
     <span style='font-size:36px; color:#4CAF50; font-weight:bold;'>₩ {st.session_state.balance:,}</span>
 </div>
 """, unsafe_allow_html=True)
+
+# [핵심] 버스트 시 2초 대기 후 재시작 로직
+if st.session_state.bust_state:
+    time.sleep(2) # 2초 동안 화면 유지 (사용자가 결과 카드를 볼 수 있음)
+    reset_game_state() # 게임 리셋
+    st.session_state.game_message = "새로운 게임이 시작됩니다."
+    st.rerun() # 화면 갱신
