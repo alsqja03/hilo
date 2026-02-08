@@ -38,7 +38,7 @@ st.markdown("""
     
     /* 버튼 스타일 (파랑 배경 + 노랑 글씨) */
     .stButton > button {
-        background-color: #0047AB !important;
+        background-color: #4D59A1 !important;
         color: #FFD700 !important;
         border: 2px solid #FFD700 !important;
         border-radius: 10px !important;
