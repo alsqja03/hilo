@@ -2,92 +2,88 @@ import streamlit as st
 import random
 
 # --- 1. 페이지 및 스타일 설정 ---
-st.set_page_config(page_title="Hi-Lo", layout="centered")
+st.set_page_config(page_title="Hi-Lo Mobile Optimized", layout="centered")
 
-# CSS 스타일 주입 (모바일 최적화 레이아웃 포함)
+# CSS 스타일 주입
 st.markdown("""
 <style>
-    /* 전체 배경 */
-    .stApp { background-color: #1e1e1e; color: white; }
-    
-    /* [모바일 최적화] 컬럼 가로 배치 강제 */
-    [data-testid="column"] {
-        min-width: 0px !important;
-        flex: 1 1 0% !important;
+    /* 1. 전체 앱 여백 및 스크롤 제거 */
+    .block-container {
+        padding-top: 1rem !important;
+        padding-bottom: 0rem !important;
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
     }
+    .stApp { background-color: #1e1e1e; color: white; overflow-x: hidden; }
+
+    /* 2. 컬럼 가로 배치 강제 및 간격 축소 */
     div[data-testid="stHorizontalBlock"] {
         display: flex !important;
         flex-direction: row !important;
         flex-wrap: nowrap !important;
-        gap: 5px !important;
+        gap: 4px !important;
+    }
+    [data-testid="column"] {
+        min-width: 0px !important;
+        flex: 1 1 0% !important;
     }
 
-    /* 상단 타이틀 */
-    .title-container {
-        display: flex; justify-content: center; margin-bottom: 10px;
-        border-bottom: 2px solid #333; padding-bottom: 10px;
-    }
-    
-    /* 카드 박스 (Deck & Current Card) */
+    /* 3. 카드 박스 크기 최적화 */
     .card-box {
-        border: 2px solid #ddd; border-radius: 10px; padding: 10px;
+        border: 1px solid #555; border-radius: 8px;
         text-align: center; background-color: white; color: black;
-        font-weight: bold; font-size: 1.2rem; margin: 0px;
-        box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+        font-weight: bold; margin: 0px;
         display: flex; flex-direction: column; justify-content: center; align-items: center;
-        height: 140px; width: 100%;
+        height: 110px; /* 높이 축소 */
     }
-    .big-card-text { font-size: 3rem; line-height: 1.1; }
+    .big-card-text { font-size: 2.2rem; line-height: 1; }
     
-    /* 히스토리 카드 */
+    /* 4. 히스토리 카드 (더 작게) */
     .history-card {
-        border: 1px solid #888; border-radius: 5px; padding: 2px;
+        border-radius: 4px; padding: 1px;
         text-align: center; background-color: #ddd; color: black;
-        font-size: 10px; width: 35px; height: 45px; display: flex;
-        justify-content: center; align-items: center; flex-direction: column;
+        font-size: 9px; width: 100%; height: 35px;
+        display: flex; justify-content: center; align-items: center; flex-direction: column;
     }
-    
-    /* 버튼 공통 스타일 */
+
+    /* 5. 버튼 스타일 최적화 (폰트 및 높이) */
     .stButton > button {
         background-color: #0047AB !important;
         color: #FFD700 !important;
-        border: 2px solid #FFD700 !important;
-        border-radius: 8px !important;
+        border: 1px solid #FFD700 !important;
+        border-radius: 6px !important;
         font-weight: bold !important;
         width: 100% !important;
-        padding: 5px !important;
+        padding: 2px !important;
+        font-size: 0.75rem !important; /* 폰트 크기 축소 */
     }
 
-    /* 베팅 버튼 전용 */
     .bet-btn-style > button {
-        height: 80px !important;
-        font-size: 0.8rem !important;
-        white-space: pre-wrap !important;
+        height: 65px !important;
+        line-height: 1.2 !important;
     }
 
-    /* 칩 버튼 전용 (완전한 원형 유지를 위해 padding 제거) */
+    /* 6. 칩 버튼 (가로 6개가 한 줄에 들어가도록) */
     .chip-btn-style > button {
         border-radius: 50% !important;
         aspect-ratio: 1 / 1;
         height: auto !important;
-        min-width: 45px !important;
-        font-size: 0.7rem !important;
+        min-width: 35px !important; /* 칩 크기 축소 */
+        font-size: 0.65rem !important;
         background-color: #003366 !important;
-        border-color: #777 !important;
-        color: white !important;
     }
 
-    /* 인출 버튼 */
+    /* 7. 인출 버튼 */
     .cashout-btn-style > button {
         background-color: #000080 !important;
-        height: 60px !important;
-        font-size: 1.1rem !important;
+        height: 50px !important;
+        font-size: 1rem !important;
     }
     
-    /* 보유 머니 박스 */
+    /* 8. 보유 머니 박스 */
     .balance-box {
-        background-color:#333; padding:10px; border-radius:15px;
-        text-align:center; margin-top:10px; border: 2px solid #555;
+        background-color:#222; padding:8px; border-radius:10px;
+        text-align:center; border: 1px solid #444; margin-top: 5px;
     }
 </style>
 """, unsafe_allow_html=True)
