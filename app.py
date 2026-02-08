@@ -7,6 +7,7 @@ st.set_page_config(page_title="Evolution Style Hi-Lo", layout="centered")
 # CSS 스타일 주입
 st.markdown("""
 <style>
+    /* 전체 배경 */
     .stApp { background-color: #1e1e1e; color: white; }
     
     /* 상단 타이틀 */
@@ -22,7 +23,7 @@ st.markdown("""
         font-weight: bold; font-size: 24px; margin: 5px;
         box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
         display: flex; flex-direction: column; justify-content: center; align-items: center;
-        height: 160px; /* 높이 고정 */
+        height: 160px;
     }
     .big-card-text { font-size: 56px; line-height: 1.1; }
     
@@ -34,72 +35,69 @@ st.markdown("""
         justify-content: center; align-items: center; flex-direction: column;
     }
     
-    /* [수정] 버튼 텍스트 가시성 강제 & 베팅 버튼 스타일 */
+    /* [핵심] 모든 버튼 기본 스타일: 진한 파랑 배경 + 노란색 글씨 */
     .stButton > button {
-        color: white !important; /* 기본 글자색 흰색 강제 */
-        opacity: 1 !important;
-    }
-    
-    .bet-btn-style { margin-bottom: 5px; } /* 여백 축소 */
-    .bet-btn-style > button {
-        width: 100% !important;
+        background-color: #0047AB !important; /* Cobalt Blue */
+        color: #FFD700 !important; /* Gold Text */
+        border: 2px solid #FFD700 !important; /* Gold Border */
         border-radius: 10px !important;
         font-weight: bold !important;
-        border: 2px solid #ffd700 !important;
-        background-color: #333 !important;
-        color: white !important; /* 텍스트 보임 보장 */
-        padding: 10px !important;
+        opacity: 1 !important; /* 투명도 제거 (항상 보이게) */
+        transition: all 0.2s ease !important;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3) !important;
+    }
+    
+    /* 마우스 호버 효과: 밝은 파랑 + 흰색 글씨 */
+    .stButton > button:hover {
+        background-color: #4169E1 !important; /* Royal Blue */
+        color: #FFFFFF !important;
+        border-color: #FFFFFF !important;
+        transform: scale(1.02);
+    }
+
+    /* 베팅 버튼 전용 스타일 (높이 조절) */
+    .bet-btn-style { margin-bottom: 5px; }
+    .bet-btn-style > button {
         height: 100px !important;
         white-space: pre-wrap !important;
         font-size: 18px !important;
-        transition: all 0.2s !important;
-    }
-    .bet-btn-style > button:hover {
-        background-color: #555 !important;
-        border-color: white !important;
-        transform: scale(1.02);
-        color: #ffd700 !important;
+        width: 100% !important;
     }
 
-    /* [수정] 칩 버튼 스타일 */
+    /* 칩 버튼 전용 스타일 */
     .chip-container { margin-top: 5px; margin-bottom: 10px; }
     .chip-btn-style > button {
-        background-color: #555 !important;
-        color: white !important; /* 텍스트 보임 보장 */
-        border: 2px solid #777 !important;
+        border-radius: 50% !important; /* 원형 */
         height: 70px !important;
         width: 100% !important;
-        border-radius: 50% !important;
         font-size: 16px !important;
-        font-weight: bold !important;
         padding: 0 !important;
+        background-color: #003366 !important; /* 더 어두운 파랑 */
+        color: white !important;
+        border: 2px solid #777 !important;
     }
     .chip-btn-style > button:hover {
-        background-color: #777 !important;
-        border-color: white !important;
-        color: #ffd700 !important;
+        background-color: #0056b3 !important;
+        color: #FFD700 !important;
+        border-color: #FFD700 !important;
     }
 
-    /* [수정] 인출(Cash Out) 버튼 스타일 & 여백 최소화 */
+    /* 인출(Cash Out) 버튼 스타일 (강조) */
     .cashout-container {
         display: flex; justify-content: center; 
-        margin-top: 10px; margin-bottom: 10px; /* 위아래 여백 축소 */
+        margin-top: 10px; margin-bottom: 10px;
     }
     .cashout-btn-style > button {
-        background-color: #222 !important;
-        color: #ffd700 !important; /* 텍스트 보임 보장 */
-        border: 3px solid #ffd700 !important;
-        border-radius: 15px !important;
-        height: 80px !important; /* 높이 약간 조절 */
-        width: 100% !important;
+        background-color: #000080 !important; /* Navy */
+        color: #FFD700 !important;
+        border: 3px solid #FFD700 !important;
+        height: 80px !important;
         font-size: 24px !important;
-        font-weight: bold !important;
-        box-shadow: 0 0 15px rgba(255, 215, 0, 0.4) !important;
+        box-shadow: 0 0 15px rgba(0, 71, 171, 0.6) !important;
     }
     .cashout-btn-style > button:hover {
-        background-color: #333 !important;
-        box-shadow: 0 0 25px rgba(255, 215, 0, 0.7) !important;
-        transform: scale(1.05);
+        background-color: #1E90FF !important; /* Dodger Blue */
+        box-shadow: 0 0 25px rgba(30, 144, 255, 0.8) !important;
     }
     
     /* 보유 머니 박스 */
@@ -172,10 +170,10 @@ def calculate_odds(current_rank):
     low_count = len([c for c in remaining if c[0] < current_rank])
     same_count = len([c for c in remaining if c[0] == current_rank])
 
-    if current_rank == 14: # Ace
+    if current_rank == 14: # Ace 특수 룰
         prob_1 = same_count / total if total > 0 else 0
         prob_2 = low_count / total if total > 0 else 0
-    else: # Normal
+    else: # 일반 룰 (Tie 포함)
         prob_1 = (high_count + same_count) / total if total > 0 else 0
         prob_2 = (low_count + same_count) / total if total > 0 else 0
 
@@ -280,7 +278,7 @@ for i, card in enumerate(st.session_state.history[:6]):
     with hist_cols[i+1]:
         st.markdown(f"<div class='history-card' style='color:{hc}'><span>{hs}</span><span>{hr}</span></div>", unsafe_allow_html=True)
 
-st.divider() # 여기는 카드와 게임 영역 구분을 위해 남겨둠 (필요 시 제거 가능)
+st.divider()
 
 # (2) 메인 게임 영역 (Deck & Current Card)
 c1, c2 = st.columns([1, 1]) 
@@ -300,8 +298,6 @@ with c2:
 
 # 게임 메시지
 st.markdown(f"<h4 style='text-align:center; color:#ffd700; margin: 10px 0;'>{st.session_state.game_message}</h4>", unsafe_allow_html=True)
-
-# --- 여백 축소 영역 시작 ---
 
 # (3) 베팅 컨트롤 영역
 current_rank = st.session_state.current_card[0]
@@ -332,7 +328,7 @@ with b_col2:
     if st.button(f"Red (♥♦)\nx1.95\nGet: {next_pot_rb:,}", key="bet_red"): process_bet("Red"); st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-# (4) 인출(Cash Out) 버튼 (여백 없이 바로 이어짐)
+# (4) 인출(Cash Out) 버튼
 st.markdown('<div class="cashout-container"><div style="width: 50%;">', unsafe_allow_html=True)
 st.markdown('<div class="cashout-btn-style">', unsafe_allow_html=True)
 cashout_label = f"₩ {st.session_state.current_pot:,}\nIN CHUL (인출)"
@@ -341,7 +337,7 @@ if st.button(cashout_label, key="cash_out"):
     st.rerun()
 st.markdown('</div></div></div>', unsafe_allow_html=True)
 
-# (5) 칩 선택 영역 (여백 없이 바로 이어짐)
+# (5) 칩 선택 영역
 st.markdown("<div style='text-align:center; margin-bottom: 5px;'>", unsafe_allow_html=True)
 st.markdown(f"**칩을 눌러 금액 추가** (즉시 차감)", unsafe_allow_html=True)
 
