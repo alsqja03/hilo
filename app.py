@@ -193,7 +193,7 @@ def cash_out():
     if st.session_state.current_pot > 0:
         win_amount = st.session_state.current_pot
         st.session_state.balance += win_amount
-        st.session_state.game_message = f"인출 완료! (+{win_amount:,}원)"
+        st.session_state.game_message = f"이기셨습니다. (+{win_amount:,}원)"
         reset_game_state()
     else:
         st.session_state.game_message = "인출할 금액이 없습니다."
