@@ -9,9 +9,10 @@ st.markdown("""
 <style>
     .stApp { background-color: #1e1e1e; color: white; }
     
-    /* 상단 로고 컨테이너 */
-    .logo-container {
+    /* 상단 타이틀 컨테이너 */
+    .title-container {
         display: flex; justify-content: center; margin-bottom: 20px;
+        border-bottom: 2px solid #333; padding-bottom: 10px;
     }
     
     /* 카드 박스 스타일 */
@@ -21,7 +22,7 @@ st.markdown("""
         font-weight: bold; font-size: 24px; margin: 5px;
         box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
         display: flex; flex-direction: column; justify-content: center; align-items: center;
-        height: 150px; /* 높이 고정 */
+        height: 150px;
     }
     .big-card-text { font-size: 48px; line-height: 1.1; }
     .deck-text { font-size: 36px; font-weight: bold; }
@@ -34,40 +35,28 @@ st.markdown("""
         justify-content: center; align-items: center; flex-direction: column;
     }
     
-    /* 베팅 버튼 스타일 (네모난 카드 형태) */
-    .bet-button {
-        border: 2px solid #ffd700 !important; /* 금색 테두리 */
-        border-radius: 10px !important; /* 약간 둥근 모서리 */
-        background-color: #333 !important;
-        color: white !important;
-        padding: 10px !important;
-        height: 100px !important;
-        display: flex !important;
-        flex-direction: column !important;
-        justify-content: center !important;
-        align-items: center !important;
-        transition: all 0.3s ease;
-    }
-    .bet-button:hover {
-        background-color: #444 !important;
-        border-color: white !important;
-        cursor: pointer;
-    }
-    .bet-type { font-size: 20px; font-weight: bold; margin-bottom: 5px; }
-    .bet-odds { font-size: 16px; color: #ffd700; }
-    .bet-win { font-size: 14px; color: #aaa; }
-
-    /* 스트림릿 기본 버튼 스타일 오버라이드 */
+    /* 베팅 버튼 스타일 */
     .stButton > button {
         width: 100%;
-        border-radius: 5px;
+        border-radius: 10px;
         font-weight: bold;
+        border: 2px solid #ffd700;
+        background-color: #333;
+        color: white;
+        padding: 10px;
+        height: auto;
+        white-space: pre-wrap;
     }
+    .stButton > button:hover {
+        background-color: #444;
+        border-color: white;
+    }
+
     /* 칩 버튼 스타일 */
     div[data-testid="column"] > .stButton > button {
         background-color: #555 !important; color: white !important;
         border: 1px solid #777 !important; height: 50px !important;
-        font-size: 14px !important;
+        font-size: 14px !important; padding: 0 !important;
     }
     div[data-testid="column"] > .stButton > button:hover {
         background-color: #777 !important; border-color: white !important;
@@ -105,27 +94,26 @@ def create_deck(num_decks=2):
     random.shuffle(deck)
     return deck
 
-# 세션 상태 초기화
-if 'deck' not in st.session_state:
-    st.session_state.deck = create_deck(2) # 2덱 사용
+def reset_game_state():
+    """보유 머니를 제외한 게임 상태 초기화"""
+    st.session_state.deck = create_deck(2)
     st.session_state.current_card = st.session_state.deck.pop()
     st.session_state.history = []
-    st.session_state.bet_amount = 0 # 초기 베팅금 0원
+    st.session_state.bet_amount = 0
+
+# 세션 상태 초기화
+if 'deck' not in st.session_state:
+    st.session_state.balance = 1000000 # Default
+    reset_game_state()
     st.session_state.game_message = "게임을 시작합니다. 칩을 눌러 베팅 금액을 추가하세요."
 
 # 사이드바: 보유 머니 설정
 with st.sidebar:
     st.header("게임 설정")
     initial_balance = st.number_input("초기 보유 머니 설정", min_value=10000, value=1000000, step=10000, format="%d")
-    if 'balance' not in st.session_state:
+    if st.button("설정된 머니로 완전 초기화"):
         st.session_state.balance = initial_balance
-    
-    if st.button("설정된 머니로 게임 재시작"):
-        st.session_state.balance = initial_balance
-        st.session_state.deck = create_deck(2)
-        st.session_state.current_card = st.session_state.deck.pop()
-        st.session_state.history = []
-        st.session_state.bet_amount = 0
+        reset_game_state()
         st.session_state.game_message = "새로운 게임이 시작되었습니다."
         st.rerun()
 
@@ -157,17 +145,21 @@ def process_bet(bet_type):
         st.session_state.game_message = "잔액이 부족합니다!"
         return
 
+    # 1. 베팅금 차감
     st.session_state.balance -= bet_amt
     current_card = st.session_state.current_card
     current_rank = current_card[0]
     
+    # 2. 배당 계산
     odds_h, odds_l = calculate_odds(current_rank)
     odds_fixed = 1.95
 
+    # 3. 결과 카드 오픈
     next_card = draw_card()
     next_rank = next_card[0]
     next_suit = next_card[1]
     
+    # 4. 승패 판정
     win = False
     payout_mult = 0
 
@@ -184,32 +176,45 @@ def process_bet(bet_type):
         payout_mult = odds_fixed
         if next_suit in BLACK_SUITS: win = True
 
+    # 결과 표시용 문자열
     cur_r_disp, cur_s_disp, _ = get_card_display(next_rank, next_suit)
     card_disp = f"{cur_s_disp}{cur_r_disp}"
 
+    # 5. 결과 처리 분기
     if win:
+        # [승리] -> 게임 계속 진행 (History 쌓임)
         payout = int(bet_amt * payout_mult)
         st.session_state.balance += payout
         st.session_state.game_message = f"승리! {card_disp} 당첨! (+{payout:,}원)"
-    elif next_rank == current_rank:
-        st.session_state.game_message = f"SNAP! (동일 숫자) - 패배. ({card_disp})"
+        
+        # 히스토리 업데이트
+        st.session_state.history.insert(0, current_card)
+        if len(st.session_state.history) > 6:
+            st.session_state.history.pop()
+        
+        # 현재 카드 갱신
+        st.session_state.current_card = next_card
+        
     else:
-        st.session_state.game_message = f"패배... 결과: {card_disp}"
-
-    st.session_state.history.insert(0, current_card)
-    if len(st.session_state.history) > 6:
-        st.session_state.history.pop()
-    
-    st.session_state.current_card = next_card
-    # st.session_state.bet_amount = 0 # 게임 후 베팅금 초기화 (선택사항)
+        # [패배] -> 보유 머니 제외하고 모두 초기화
+        loss_reason = "예측 실패"
+        if next_rank == current_rank:
+            loss_reason = "SNAP(동일 숫자)"
+            
+        st.session_state.game_message = f"패배 ({loss_reason})! 결과: {card_disp} -> 게임이 초기화되었습니다."
+        
+        # --- 초기화 로직 수행 ---
+        reset_game_state()
 
 
 # --- 3. 화면 구성 ---
 
-# (0) 상단 로고
-st.markdown("<div class='logo-container'>", unsafe_allow_html=True)
-st.image("image_4.png", width=300) # 로고 이미지 파일명 확인 필요
-st.markdown("</div>", unsafe_allow_html=True)
+# (0) 상단 타이틀
+st.markdown("""
+<div class='title-container'>
+    <h1 style='font-size: 48px; font-weight: bold; margin: 0; color: #ffd700; text-shadow: 2px 2px 4px #000000;'>HI-LO</h1>
+</div>
+""", unsafe_allow_html=True)
 
 # (1) 히스토리 영역
 st.markdown("### Previous Cards")
@@ -226,7 +231,7 @@ for i, card in enumerate(st.session_state.history[:6]):
 
 st.divider()
 
-# (2) 메인 게임 영역 (Deck & Current Card)
+# (2) 메인 게임 영역
 c1, c2 = st.columns([1, 1])
 with c1:
     st.markdown(f"""
@@ -245,33 +250,13 @@ with c2:
 # 게임 메시지
 st.markdown(f"<h4 style='text-align:center; color:#ffd700; margin: 20px 0;'>{st.session_state.game_message}</h4>", unsafe_allow_html=True)
 
-# (3) 베팅 컨트롤 영역 (네모난 버튼 UI)
+# (3) 베팅 컨트롤 영역
 odds_h, odds_l = calculate_odds(st.session_state.current_card[0])
 bet_amt = st.session_state.bet_amount
 pot_h = int(bet_amt * odds_h)
 pot_l = int(bet_amt * odds_l)
 pot_rb = int(bet_amt * 1.95)
 
-# 커스텀 버튼 생성 함수
-def create_bet_button(col, type_str, label, odds_val, pot_val, color_class=""):
-    with col:
-        btn_html = f"""
-        <button class='bet-button {color_class}'>
-            <div class='bet-type'>{label}</div>
-            <div class='bet-odds'>x{odds_val}</div>
-            <div class='bet-win'>Win: {pot_val:,}</div>
-        </button>
-        """
-        if st.button(label, key=f"btn_{type_str}", help=f"{label} 베팅"): # 실제 클릭 이벤트용 투명 버튼
-            process_bet(type_str)
-            st.rerun()
-        # 위 st.button 위에 HTML 버튼을 덮어씌우는 방식으로 구현 (제한적)
-        # Streamlit 한계로 완벽한 커스텀 HTML 버튼 이벤트 연결이 어려워, 
-        # 시각적 요소는 HTML로, 클릭은 st.button으로 처리하는 타협안을 사용합니다.
-        # 실제로는 st.button의 스타일을 CSS로 덮어쓰는 방식이 더 안정적입니다.
-        # 아래는 CSS로 스타일링된 st.button을 사용하는 방식입니다.
-
-# 2x2 그리드 베팅 버튼 (CSS 스타일 적용됨)
 b_col1, b_col2 = st.columns(2)
 with b_col1:
     if st.button(f"Hi (▲)\nx{odds_h}\nWin: {pot_h:,}", key="bet_hi"): process_bet("Hi"); st.rerun()
@@ -286,15 +271,14 @@ st.divider()
 st.markdown("<div style='text-align:center'>", unsafe_allow_html=True)
 st.markdown(f"#### 총 베팅 금액: <span style='color:#ffd700; font-size:24px;'>{st.session_state.bet_amount:,} 원</span>", unsafe_allow_html=True)
 
-chip_cols = st.columns([1, 1, 1, 1, 1, 1, 1.5]) # 마지막 컬럼은 초기화 버튼용
+chip_cols = st.columns([1, 1, 1, 1, 1, 1, 1.5])
 chips = [1000, 5000, 10000, 50000, 100000, 500000]
 for i, amount in enumerate(chips):
     with chip_cols[i]:
         if st.button(f"+{amount//1000}k", key=f"chip_{amount}"):
-            st.session_state.bet_amount += amount # 금액 누적
+            st.session_state.bet_amount += amount
             st.rerun()
 
-# 베팅 금액 초기화 버튼
 with chip_cols[-1]:
     st.markdown("<div class='reset-btn'>", unsafe_allow_html=True)
     if st.button("Reset ↺", key="reset_bet"):
