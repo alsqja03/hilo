@@ -249,7 +249,7 @@ def process_bet(bet_type):
         st.session_state.current_pot = new_pot
         
         # [수정] 성공 메시지 형식: ₩ 15,000, x1.5
-        st.session_state.game_message = f"적중! ₩ {new_pot:,}, x{payout_mult}"
+        st.session_state.game_message = f"₩ {new_pot:,}, x{payout_mult}"
         
         st.session_state.history.insert(0, current_card)
         if len(st.session_state.history) > 6:
