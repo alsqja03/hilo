@@ -15,16 +15,16 @@ st.markdown("""
         border-bottom: 2px solid #333; padding-bottom: 10px;
     }
     
-    /* 카드 박스 */
+    /* 카드 박스 (Deck & Current Card) */
     .card-box {
         border: 2px solid #ddd; border-radius: 10px; padding: 10px;
         text-align: center; background-color: white; color: black;
         font-weight: bold; font-size: 24px; margin: 5px;
         box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
         display: flex; flex-direction: column; justify-content: center; align-items: center;
-        height: 150px;
+        height: 160px; /* 높이 고정 */
     }
-    .big-card-text { font-size: 48px; line-height: 1.1; }
+    .big-card-text { font-size: 56px; line-height: 1.1; }
     
     /* 히스토리 카드 */
     .history-card {
@@ -34,40 +34,72 @@ st.markdown("""
         justify-content: center; align-items: center; flex-direction: column;
     }
     
-    /* 현재 획득 금액 표시 영역 */
-    .pot-display {
-        background-color: #222; border: 2px solid #ffd700; border-radius: 10px;
-        padding: 15px; text-align: center; margin: 20px 0;
-        box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+    /* [수정] 베팅 버튼 스타일 - 카드 박스와 유사한 크기/너비 */
+    .bet-btn-style > button {
+        width: 100% !important;
+        border-radius: 10px !important;
+        font-weight: bold !important;
+        border: 2px solid #ffd700 !important;
+        background-color: #333 !important;
+        color: white !important;
+        padding: 10px !important;
+        height: 100px !important; /* 높이 확대 */
+        white-space: pre-wrap !important;
+        font-size: 18px !important;
+        transition: all 0.2s !important;
     }
-    
-    /* 베팅 버튼 공통 스타일 */
-    .stButton > button {
-        width: 100%; border-radius: 10px; font-weight: bold;
-        border: 2px solid #ffd700; background-color: #333; color: white;
-        padding: 10px; height: auto; white-space: pre-wrap;
-    }
-    .stButton > button:hover { background-color: #444; border-color: white; }
-
-    /* 칩 버튼 */
-    div[data-testid="column"] > .stButton > button {
-        background-color: #555 !important; color: white !important;
-        border: 1px solid #777 !important; height: 50px !important;
-        font-size: 14px !important; padding: 0 !important;
-    }
-    div[data-testid="column"] > .stButton > button:hover {
-        background-color: #777 !important; border-color: white !important;
+    .bet-btn-style > button:hover {
+        background-color: #555 !important;
+        border-color: white !important;
+        transform: scale(1.02);
     }
 
-    /* 인출(Cash Out) 버튼 스타일 - 크고 초록색 */
-    .cashout-btn > button {
-        background-color: #2e7d32 !important; /* Green */
-        color: white !important; font-size: 20px !important;
-        border: 2px solid #4caf50 !important;
-        height: 80px !important;
+    /* [수정] 칩 버튼 스타일 - 확대 */
+    .chip-btn-style > button {
+        background-color: #555 !important;
+        color: white !important;
+        border: 2px solid #777 !important;
+        height: 70px !important; /* 높이 확대 */
+        width: 100% !important;
+        border-radius: 50% !important; /* 원형 느낌 */
+        font-size: 16px !important; /* 글자 확대 */
+        font-weight: bold !important;
+        padding: 0 !important;
     }
-    .cashout-btn > button:hover { background-color: #1b5e20 !important; }
+    .chip-btn-style > button:hover {
+        background-color: #777 !important;
+        border-color: white !important;
+        color: #ffd700 !important;
+    }
+
+    /* [수정] 인출(Cash Out) 버튼 스타일 - 이전 '획득 금액' 디자인 적용 */
+    .cashout-container {
+        display: flex; justify-content: center; margin: 20px 0;
+    }
+    .cashout-btn-style > button {
+        background-color: #222 !important; /* 검은 배경 */
+        color: #ffd700 !important; /* 금색 글씨 */
+        border: 3px solid #ffd700 !important; /* 금색 테두리 */
+        border-radius: 15px !important;
+        height: 100px !important;
+        width: 100% !important;
+        font-size: 24px !important;
+        font-weight: bold !important;
+        box-shadow: 0 0 15px rgba(255, 215, 0, 0.4) !important;
+        transition: all 0.3s !important;
+    }
+    .cashout-btn-style > button:hover {
+        background-color: #333 !important;
+        box-shadow: 0 0 25px rgba(255, 215, 0, 0.7) !important;
+        transform: scale(1.05);
+    }
     
+    /* 보유 머니 박스 */
+    .balance-box {
+        background-color:#333; padding:20px; border-radius:15px;
+        text-align:center; margin-top:30px; border: 2px solid #555;
+    }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -98,7 +130,7 @@ def reset_game_state():
     st.session_state.deck = create_deck(2)
     st.session_state.current_card = st.session_state.deck.pop()
     st.session_state.history = []
-    st.session_state.current_pot = 0 # 테이블 위 판돈 초기화
+    st.session_state.current_pot = 0 
 
 # 세션 상태 초기화
 if 'deck' not in st.session_state:
@@ -124,11 +156,6 @@ def draw_card():
     return st.session_state.deck.pop()
 
 def calculate_odds(current_rank):
-    """
-    배당률 계산 로직 변경:
-    - 일반: 동률(Tie)도 승리로 간주하므로 확률 분모에 포함.
-    - Ace: '동일'과 '미만'으로 나뉨.
-    """
     remaining = st.session_state.deck
     total = len(remaining)
     if total == 0: return 1.0, 1.0
@@ -137,18 +164,13 @@ def calculate_odds(current_rank):
     low_count = len([c for c in remaining if c[0] < current_rank])
     same_count = len([c for c in remaining if c[0] == current_rank])
 
-    if current_rank == 14: # Ace일 경우 (특수 룰)
-        # 버튼 1: 동일 (Same)
+    if current_rank == 14: # Ace
         prob_1 = same_count / total if total > 0 else 0
-        # 버튼 2: 미만 (Under)
         prob_2 = low_count / total if total > 0 else 0
-    else: # 일반 경우 (Snap도 승리)
-        # 버튼 1: 초과 (Over) + 동일 (Tie)
+    else: # Normal
         prob_1 = (high_count + same_count) / total if total > 0 else 0
-        # 버튼 2: 미만 (Under) + 동일 (Tie)
         prob_2 = (low_count + same_count) / total if total > 0 else 0
 
-    # 배당률 계산 (최소 1.01배, 최대 20배 제한)
     odds_1 = round(1 / prob_1, 2) if prob_1 > 0 else 0.0
     odds_2 = round(1 / prob_2, 2) if prob_2 > 0 else 0.0
     
@@ -160,26 +182,26 @@ def add_chip(amount):
         st.session_state.current_pot += amount
         st.session_state.game_message = "베팅 진행 중..."
     else:
-        st.session_state.game_message = "잔액이 부족합니다."
+        st.session_state.game_message = "잔액이 부족합니다!"
 
 def cash_out():
     if st.session_state.current_pot > 0:
         win_amount = st.session_state.current_pot
         st.session_state.balance += win_amount
-        st.session_state.game_message = f"이기셨습니다. ({win_amount:,}원)"
+        st.session_state.game_message = f"인출 완료! (+{win_amount:,}원)"
         reset_game_state()
     else:
         st.session_state.game_message = "인출할 금액이 없습니다."
 
 def process_bet(bet_type):
     if st.session_state.current_pot <= 0:
-        st.session_state.game_message = "칩을 먼저 선택해 주세요."
+        st.session_state.game_message = "칩을 먼저 선택해 주세요!"
         return
 
     current_card = st.session_state.current_card
     current_rank = current_card[0]
     
-    odds_1, odds_2 = calculate_odds(current_rank) # odds_1: Hi/Same, odds_2: Lo
+    odds_1, odds_2 = calculate_odds(current_rank)
     odds_fixed = 1.95
 
     next_card = draw_card()
@@ -189,23 +211,21 @@ def process_bet(bet_type):
     win = False
     payout_mult = 0.0
 
-    # 승리 조건 로직
-    if current_rank == 14: # 현재 카드가 ACE일 때
-        if bet_type == "Hi": # "동일" 버튼 역할
+    if current_rank == 14: # Ace
+        if bet_type == "Hi": # Same
             payout_mult = odds_1
-            if next_rank == 14: win = True # A -> A 만 승리
-        elif bet_type == "Lo": # "미만" 버튼 역할
+            if next_rank == 14: win = True
+        elif bet_type == "Lo": # Under
             payout_mult = odds_2
-            if next_rank < 14: win = True # A -> ~K 승리
-    else: # 일반적인 경우
-        if bet_type == "Hi": # "초과" 버튼 역할
+            if next_rank < 14: win = True
+    else: # Normal
+        if bet_type == "Hi": # Over
             payout_mult = odds_1
-            if next_rank >= current_rank: win = True # 초과 OR 동일 승리
-        elif bet_type == "Lo": # "미만" 버튼 역할
+            if next_rank >= current_rank: win = True
+        elif bet_type == "Lo": # Under
             payout_mult = odds_2
-            if next_rank <= current_rank: win = True # 미만 OR 동일 승리
+            if next_rank <= current_rank: win = True
 
-    # Red/Black (항상 고정)
     if bet_type == "Red":
         payout_mult = odds_fixed
         if next_suit in RED_SUITS: win = True
@@ -213,27 +233,20 @@ def process_bet(bet_type):
         payout_mult = odds_fixed
         if next_suit in BLACK_SUITS: win = True
 
-    # 결과 처리
     cur_r_disp, cur_s_disp, _ = get_card_display(next_rank, next_suit)
     card_disp = f"{cur_s_disp}{cur_r_disp}"
 
     if win:
-        prev_pot = st.session_state.current_pot
-        new_pot = int(prev_pot * payout_mult)
+        new_pot = int(st.session_state.current_pot * payout_mult)
         st.session_state.current_pot = new_pot
-        st.session_state.game_message = f" "
+        st.session_state.game_message = f"적중! {card_disp} (현재 {new_pot:,}원)"
         
         st.session_state.history.insert(0, current_card)
         if len(st.session_state.history) > 6:
             st.session_state.history.pop()
         st.session_state.current_card = next_card
     else:
-        reason = "패배"
-        # 상세 패배 사유
-        if current_rank == 14 and bet_type == "Lo" and next_rank == 14:
-            reason = "A-A 동일 (미만 패배)"
-        
-        st.session_state.game_message = f"버스트(Bust)! ({reason}: {card_disp})"
+        st.session_state.game_message = f"버스트! ({card_disp})"
         reset_game_state()
 
 
@@ -259,17 +272,10 @@ for i, card in enumerate(st.session_state.history[:6]):
     with hist_cols[i+1]:
         st.markdown(f"<div class='history-card' style='color:{hc}'><span>{hs}</span><span>{hr}</span></div>", unsafe_allow_html=True)
 
-# (2) 현재 획득 금액 표시
-pot_value = st.session_state.current_pot
-st.markdown(f"""
-<div class='pot-display'>
-    <div style='color:#aaa; font-size:16px;'>현재 획득 금액 (Current Pot)</div>
-    <div style='color:#ffd700; font-size:32px; font-weight:bold;'>₩ {pot_value:,}</div>
-</div>
-""", unsafe_allow_html=True)
+st.divider()
 
-# (3) 메인 게임 영역
-c1, c2 = st.columns([1, 1])
+# (2) 메인 게임 영역 (Deck & Current Card)
+c1, c2 = st.columns([1, 1]) # 1:1 비율
 with c1:
     st.markdown(f"""
     <div class='card-box' style='background: repeating-linear-gradient(45deg, #606dbc, #606dbc 10px, #465298 10px, #465298 20px); color: white;'>
@@ -284,10 +290,11 @@ with c2:
     </div>
     """, unsafe_allow_html=True)
 
-st.markdown(f"<h4 style='text-align:center; color:#ffd700; margin: 20px 0;'>{st.session_state.game_message}</h4>", unsafe_allow_html=True)
+# 게임 메시지
+st.markdown(f"<h4 style='text-align:center; color:#ffd700; margin: 15px 0;'>{st.session_state.game_message}</h4>", unsafe_allow_html=True)
 
-# (4) 베팅 컨트롤 영역
-# 배당률 및 라벨 결정 로직
+# (3) 베팅 컨트롤 영역
+# 배당률 계산
 current_rank = st.session_state.current_card[0]
 odds_1, odds_2 = calculate_odds(current_rank)
 curr_pot = st.session_state.current_pot
@@ -295,7 +302,6 @@ next_pot_1 = int(curr_pot * odds_1)
 next_pot_2 = int(curr_pot * odds_2)
 next_pot_rb = int(curr_pot * 1.95)
 
-# 버튼 라벨 동적 생성
 if current_rank == 14: # Ace
     label_1 = "동일 (Same)"
     label_2 = "미만 (Under)"
@@ -303,48 +309,54 @@ else:
     label_1 = "초과 (Over)"
     label_2 = "미만 (Under)"
 
-b_col1, b_col2 = st.columns(2)
+# [수정] 베팅 버튼 레이아웃 - 위 카드박스([1,1])와 동일한 그리드 사용
+b_col1, b_col2 = st.columns([1, 1]) 
+
 with b_col1:
-    # Button 1 (Hi/Same)
+    # 스타일 적용을 위해 컨테이너 사용
+    st.markdown('<div class="bet-btn-style">', unsafe_allow_html=True)
     if st.button(f"{label_1}\nx{odds_1}\nGet: {next_pot_1:,}", key="bet_hi"): process_bet("Hi"); st.rerun()
     if st.button(f"Black (♠♣)\nx1.95\nGet: {next_pot_rb:,}", key="bet_black"): process_bet("Black"); st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+
 with b_col2:
-    # Button 2 (Lo)
+    st.markdown('<div class="bet-btn-style">', unsafe_allow_html=True)
     if st.button(f"{label_2}\nx{odds_2}\nGet: {next_pot_2:,}", key="bet_lo"): process_bet("Lo"); st.rerun()
     if st.button(f"Red (♥♦)\nx1.95\nGet: {next_pot_rb:,}", key="bet_red"): process_bet("Red"); st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
 
 st.divider()
 
-# (5) 인출(Cash Out) 버튼 (획득 금액 포함)
-st.markdown("<div style='display:flex; justify-content:center; margin-bottom:20px;'>", unsafe_allow_html=True)
-c_btn_col1, c_btn_col2, c_btn_col3 = st.columns([1, 2, 1])
-with c_btn_col2:
-    st.markdown("<div class='cashout-btn'>", unsafe_allow_html=True)
-    # 인출 버튼 속에 현재 금액 표시
-    btn_text = f"IN CHUL (인출)\n₩ {st.session_state.current_pot:,}"
-    if st.button(btn_text, key="cash_out"):
-        cash_out()
-        st.rerun()
-    st.markdown("</div>", unsafe_allow_html=True)
-st.markdown("</div>", unsafe_allow_html=True)
+# (4) 인출(Cash Out) 버튼 (이전 획득금액 표시창 스타일 적용 + 중앙 배치)
+st.markdown('<div class="cashout-container"><div style="width: 50%;">', unsafe_allow_html=True) # 중앙 50% 너비
+st.markdown('<div class="cashout-btn-style">', unsafe_allow_html=True)
+# 버튼 내용: 현재 획득 금액 표시
+cashout_label = f"₩ {st.session_state.current_pot:,}\nIN CHUL (인출)"
+if st.button(cashout_label, key="cash_out"):
+    cash_out()
+    st.rerun()
+st.markdown('</div></div></div>', unsafe_allow_html=True)
 
 st.divider()
 
-# (6) 칩 선택 영역
+# (5) 칩 선택 영역 (버튼 확대)
 st.markdown("<div style='text-align:center'>", unsafe_allow_html=True)
 st.markdown(f"#### 칩을 눌러 금액 추가 (즉시 차감)", unsafe_allow_html=True)
+
 chip_cols = st.columns(6)
 chips = [1000, 5000, 10000, 50000, 100000, 500000]
 for i, amount in enumerate(chips):
     with chip_cols[i]:
+        st.markdown('<div class="chip-btn-style">', unsafe_allow_html=True)
         if st.button(f"+{amount//1000}k", key=f"chip_{amount}"):
             add_chip(amount)
             st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
-# (7) 보유 머니
+# (6) 보유 머니
 st.markdown(f"""
-<div style='background-color:#333; padding:20px; border-radius:15px; text-align:center; margin-top:30px; border: 2px solid #555;'>
+<div class='balance-box'>
     <span style='font-size:18px; color:#aaa;'>보유 머니 (Balance)</span><br>
     <span style='font-size:36px; color:#4CAF50; font-weight:bold;'>₩ {st.session_state.balance:,}</span>
 </div>
