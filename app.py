@@ -132,13 +132,15 @@ def reset_game_state():
     st.session_state.current_card = st.session_state.deck.pop()
     st.session_state.history = []
     st.session_state.current_pot = 0 
-    st.session_state.bust_state = False # 버스트 상태 해제
+    st.session_state.total_invested = 0 # [수정] 총 투자 원금 초기화
+    st.session_state.bust_state = False
 
 # 세션 상태 초기화
 if 'deck' not in st.session_state:
     st.session_state.balance = 1000000
     st.session_state.current_pot = 0
-    st.session_state.bust_state = False # 버스트 상태 플래그
+    st.session_state.total_invested = 0 # [수정] 총 투자금 변수 추가
+    st.session_state.bust_state = False
     reset_game_state()
     st.session_state.game_message = "게임을 시작합니다. 칩을 눌러 베팅하세요."
 
@@ -180,10 +182,11 @@ def calculate_odds(current_rank):
     return min(odds_1, 50.0), min(odds_2, 50.0)
 
 def add_chip(amount):
-    if st.session_state.bust_state: return # 버스트 상태면 조작 불가
+    if st.session_state.bust_state: return
     if st.session_state.balance >= amount:
         st.session_state.balance -= amount
         st.session_state.current_pot += amount
+        st.session_state.total_invested += amount # [수정] 투자 원금 누적
         st.session_state.game_message = "베팅 진행 중..."
     else:
         st.session_state.game_message = "잔액이 부족합니다!"
@@ -193,7 +196,7 @@ def cash_out():
     if st.session_state.current_pot > 0:
         win_amount = st.session_state.current_pot
         st.session_state.balance += win_amount
-        st.session_state.game_message = f"이기셨습니다. (+{win_amount:,}원)"
+        st.session_state.game_message = f"이기셨습니다! (+{win_amount:,}원)"
         reset_game_state()
     else:
         st.session_state.game_message = "인출할 금액이 없습니다."
@@ -208,6 +211,11 @@ def process_bet(bet_type):
     current_rank = current_card[0]
     
     odds_1, odds_2 = calculate_odds(current_rank)
+    
+    # [수정] 누적 배당률 계산을 위해 필요한 변수들
+    total_invested = st.session_state.total_invested
+    current_pot = st.session_state.current_pot
+    
     odds_fixed = 1.95
 
     next_card = draw_card()
@@ -217,15 +225,14 @@ def process_bet(bet_type):
     win = False
     payout_mult = 0.0
 
-    # 승리 조건 체크
-    if current_rank == 14: # Ace
+    if current_rank == 14: 
         if bet_type == "Hi": # Same
             payout_mult = odds_1
             if next_rank == 14: win = True
         elif bet_type == "Lo": # Under
             payout_mult = odds_2
             if next_rank < 14: win = True
-    else: # Normal
+    else: 
         if bet_type == "Hi": # Over
             payout_mult = odds_1
             if next_rank >= current_rank: win = True
@@ -243,24 +250,25 @@ def process_bet(bet_type):
     cur_r_disp, cur_s_disp, _ = get_card_display(next_rank, next_suit)
     card_disp = f"{cur_s_disp}{cur_r_disp}"
 
-    # 승패 처리
     if win:
         new_pot = int(st.session_state.current_pot * payout_mult)
         st.session_state.current_pot = new_pot
         
-        # [수정] 성공 메시지 형식: ₩ 15,000, x1.5
-        st.session_state.game_message = f"₩ {new_pot:,}, x{payout_mult}"
+        # [수정] 누적 배당률 계산: 현재 획득 금액 / 총 투자 원금
+        if total_invested > 0:
+            cumulative_odds = new_pot / total_invested
+        else:
+            cumulative_odds = 0.0
+            
+        st.session_state.game_message = f" ₩ {new_pot:,}, x{cumulative_odds:.2f}"
         
         st.session_state.history.insert(0, current_card)
         if len(st.session_state.history) > 6:
             st.session_state.history.pop()
         st.session_state.current_card = next_card
     else:
-        # [수정] 버스트 처리: 카드는 보여주되, 상태 플래그 설정
         st.session_state.bust_state = True
         st.session_state.game_message = f"버스트(Bust)! {card_disp}"
-        
-        # 카드를 업데이트해서 화면에 결과 카드를 보여줌
         st.session_state.history.insert(0, current_card)
         if len(st.session_state.history) > 6:
             st.session_state.history.pop()
@@ -314,10 +322,25 @@ st.markdown(f"<h4 style='text-align:center; color:{msg_color}; margin: 10px 0;'>
 # (3) 베팅 컨트롤 영역
 current_rank = st.session_state.current_card[0]
 odds_1, odds_2 = calculate_odds(current_rank)
+
+# [수정] 누적 배당률 계산 로직 (표시용)
 curr_pot = st.session_state.current_pot
+total_inv = st.session_state.total_invested
+
 next_pot_1 = int(curr_pot * odds_1)
 next_pot_2 = int(curr_pot * odds_2)
 next_pot_rb = int(curr_pot * 1.95)
+
+# 총 투자금이 있어야 누적 배당률 계산 가능 (0으로 나누기 방지)
+if total_inv > 0:
+    disp_odds_1 = next_pot_1 / total_inv
+    disp_odds_2 = next_pot_2 / total_inv
+    disp_odds_rb = next_pot_rb / total_inv
+else:
+    # 칩을 걸기 전이면 0.00 표시
+    disp_odds_1 = 0.0
+    disp_odds_2 = 0.0
+    disp_odds_rb = 0.0
 
 if current_rank == 14: 
     label_1 = "동일 (Same)"
@@ -328,22 +351,27 @@ else:
 
 b_col1, b_col2 = st.columns([1, 1]) 
 
+# [수정] 버튼 위치 변경 (Lo가 왼쪽, Hi가 오른쪽)
 with b_col1:
     st.markdown('<div class="bet-btn-style">', unsafe_allow_html=True)
-    if st.button(f"{label_1}\nx{odds_1}\nGet: {next_pot_1:,}", key="bet_hi", disabled=st.session_state.bust_state): 
-        process_bet("Hi")
+    # Lo (미만/Under) 버튼 배치 (odds_2 사용)
+    if st.button(f"{label_2}\nx{disp_odds_2:.2f}\nGet: {next_pot_2:,}", key="bet_lo", disabled=st.session_state.bust_state): 
+        process_bet("Lo")
         st.rerun()
-    if st.button(f"Black (♠♣)\nx1.95\nGet: {next_pot_rb:,}", key="bet_black", disabled=st.session_state.bust_state): 
+    # Black 버튼
+    if st.button(f"Black (♠♣)\nx{disp_odds_rb:.2f}\nGet: {next_pot_rb:,}", key="bet_black", disabled=st.session_state.bust_state): 
         process_bet("Black")
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
 with b_col2:
     st.markdown('<div class="bet-btn-style">', unsafe_allow_html=True)
-    if st.button(f"{label_2}\nx{odds_2}\nGet: {next_pot_2:,}", key="bet_lo", disabled=st.session_state.bust_state): 
-        process_bet("Lo")
+    # Hi (초과/Over/Same) 버튼 배치 (odds_1 사용)
+    if st.button(f"{label_1}\nx{disp_odds_1:.2f}\nGet: {next_pot_1:,}", key="bet_hi", disabled=st.session_state.bust_state): 
+        process_bet("Hi")
         st.rerun()
-    if st.button(f"Red (♥♦)\nx1.95\nGet: {next_pot_rb:,}", key="bet_red", disabled=st.session_state.bust_state): 
+    # Red 버튼
+    if st.button(f"Red (♥♦)\nx{disp_odds_rb:.2f}\nGet: {next_pot_rb:,}", key="bet_red", disabled=st.session_state.bust_state): 
         process_bet("Red")
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
@@ -359,7 +387,7 @@ st.markdown('</div></div></div>', unsafe_allow_html=True)
 
 # (5) 칩 선택 영역
 st.markdown("<div style='text-align:center; margin-bottom: 5px;'>", unsafe_allow_html=True)
-st.markdown(f"**칩을 눌러 금액 추가** (즉시 차감)", unsafe_allow_html=True)
+st.markdown(f"**칩을 눌러 금액 추가** ", unsafe_allow_html=True)
 
 chip_cols = st.columns(6)
 chips = [1000, 5000, 10000, 50000, 100000, 500000]
@@ -380,9 +408,8 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# [핵심] 버스트 시 2초 대기 후 재시작 로직
 if st.session_state.bust_state:
-    time.sleep(2) # 2초 동안 화면 유지 (사용자가 결과 카드를 볼 수 있음)
-    reset_game_state() # 게임 리셋
+    time.sleep(2)
+    reset_game_state()
     st.session_state.game_message = "새로운 게임이 시작됩니다."
-    st.rerun() # 화면 갱신
+    st.rerun()
