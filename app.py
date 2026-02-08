@@ -160,20 +160,20 @@ def add_chip(amount):
         st.session_state.current_pot += amount
         st.session_state.game_message = "베팅 진행 중..."
     else:
-        st.session_state.game_message = "잔액이 부족합니다!"
+        st.session_state.game_message = "잔액이 부족합니다."
 
 def cash_out():
     if st.session_state.current_pot > 0:
         win_amount = st.session_state.current_pot
         st.session_state.balance += win_amount
-        st.session_state.game_message = f"인출 완료! 이기셨습니다. ({win_amount:,}원 획득)"
+        st.session_state.game_message = f"이기셨습니다. ({win_amount:,}원)"
         reset_game_state()
     else:
         st.session_state.game_message = "인출할 금액이 없습니다."
 
 def process_bet(bet_type):
     if st.session_state.current_pot <= 0:
-        st.session_state.game_message = "칩을 먼저 선택해 주세요!"
+        st.session_state.game_message = "칩을 먼저 선택해 주세요."
         return
 
     current_card = st.session_state.current_card
@@ -221,7 +221,7 @@ def process_bet(bet_type):
         prev_pot = st.session_state.current_pot
         new_pot = int(prev_pot * payout_mult)
         st.session_state.current_pot = new_pot
-        st.session_state.game_message = f"적중! {card_disp} (현재 {new_pot:,}원)"
+        st.session_state.game_message = f" "
         
         st.session_state.history.insert(0, current_card)
         if len(st.session_state.history) > 6:
