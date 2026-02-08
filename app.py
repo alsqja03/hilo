@@ -3,7 +3,7 @@ import random
 import time
 
 # --- 1. 게임 설정 및 초기화 ---
-st.set_page_config(page_title="Evolution Style Hi-Lo", layout="centered")
+st.set_page_config(page_title="Hi-Lo", layout="centered")
 
 # 카드 문양 및 색상 정의
 SUITS = ['♠', '♣', '♥', '♦']
@@ -215,4 +215,47 @@ st.divider()
 # (3) 베팅 컨트롤 영역
 odds_h, odds_l = calculate_odds(st.session_state.current_card[0])
 potential_win_h = int(st.session_state.bet_amount * odds_h)
-potential_win
+potential_win_l = int(st.session_state.bet_amount * odds_l)
+potential_win_rb = int(st.session_state.bet_amount * 1.95)
+
+b_col1, b_col2 = st.columns(2)
+
+with b_col1:
+    if st.button(f"Hi (▲)\nx{odds_h}\nWin: {potential_win_h:,}", use_container_width=True):
+        process_bet("Hi")
+        st.rerun()
+    if st.button(f"Black (♠♣)\nx1.95\nWin: {potential_win_rb:,}", use_container_width=True):
+        process_bet("Black")
+        st.rerun()
+
+with b_col2:
+    if st.button(f"Lo (▼)\nx{odds_l}\nWin: {potential_win_l:,}", use_container_width=True):
+        process_bet("Lo")
+        st.rerun()
+    if st.button(f"Red (♥♦)\nx1.95\nWin: {potential_win_rb:,}", use_container_width=True):
+        process_bet("Red")
+        st.rerun()
+
+st.divider()
+
+# (4) 칩 선택 및 정보
+st.markdown("<div style='text-align:center'>", unsafe_allow_html=True)
+st.markdown(f"#### 현재 베팅 금액: <span style='color:gold'>{st.session_state.bet_amount:,} 원</span>", unsafe_allow_html=True)
+
+chips = [1000, 5000, 10000, 50000, 100000, 500000]
+cols = st.columns(len(chips))
+for i, amount in enumerate(chips):
+    with cols[i]:
+        if st.button(f"{amount//1000}k", key=f"chip_{amount}"):
+            st.session_state.bet_amount = amount
+            st.rerun()
+
+st.markdown("</div>", unsafe_allow_html=True)
+
+# (5) 보유 머니
+st.markdown(f"""
+<div style='background-color:#333; padding:15px; border-radius:10px; text-align:center; margin-top:20px;'>
+    <span style='font-size:20px; color:white;'>보유 머니 (Balance)</span><br>
+    <span style='font-size:32px; color:#4CAF50; font-weight:bold;'>₩ {st.session_state.balance:,}</span>
+</div>
+""", unsafe_allow_html=True)
