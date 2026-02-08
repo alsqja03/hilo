@@ -2,7 +2,7 @@ import streamlit as st
 import random
 
 # --- 1. 페이지 및 스타일 설정 ---
-st.set_page_config(page_title="Evolution Style Hi-Lo", layout="centered")
+st.set_page_config(page_title="Hi-Lo", layout="centered")
 
 # CSS 스타일 주입 (모바일 최적화 레이아웃 포함)
 st.markdown("""
