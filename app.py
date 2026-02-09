@@ -300,14 +300,7 @@ for i, card in enumerate(st.session_state.history[:6]):
 st.divider()
 
 # (2) 메인 게임 영역
-c1, c2 = st.columns([1, 1]) 
-with c1:
-    st.markdown(f"""
-    <div class='card-box' style='background: repeating-linear-gradient(45deg, #606dbc, #606dbc 10px, #465298 10px, #465298 20px); color: white;'>
-        <div style='font-size:36px; font-weight:bold;'>Deck</div>
-        <div style='font-size: 20px; margin-top: 10px;'>{len(st.session_state.deck)} left</div>
-    </div>
-    """, unsafe_allow_html=True)
+c2 = st.columns([1])
 with c2:
     st.markdown(f"""
     <div class='card-box' style='color: {cur_c};'>
