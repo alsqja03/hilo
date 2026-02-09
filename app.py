@@ -355,11 +355,11 @@ b_col1, b_col2 = st.columns([1, 1])
 with b_col1:
     st.markdown('<div class="bet-btn-style">', unsafe_allow_html=True)
     # Lo (미만/Under) 버튼 배치 (odds_2 사용)
-    if st.button(f"{label_2}\nx{disp_odds_2:.2f}\nGet: {next_pot_2:,}", key="bet_lo", disabled=st.session_state.bust_state): 
+    if st.button(f"{label_2}\nx{odds_2:.2f}\nGet: {next_pot_2:,}", key="bet_lo", disabled=st.session_state.bust_state): 
         process_bet("Lo")
         st.rerun()
     # Black 버튼
-    if st.button(f"Black (♠♣)\nx{disp_odds_rb:.2f}\nGet: {next_pot_rb:,}", key="bet_black", disabled=st.session_state.bust_state): 
+    if st.button(f"Black (♠♣)\nx1.95\nGet: {next_pot_rb:,}", key="bet_black", disabled=st.session_state.bust_state): 
         process_bet("Black")
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
@@ -367,11 +367,11 @@ with b_col1:
 with b_col2:
     st.markdown('<div class="bet-btn-style">', unsafe_allow_html=True)
     # Hi (초과/Over/Same) 버튼 배치 (odds_1 사용)
-    if st.button(f"{label_1}\nx{disp_odds_1:.2f}\nGet: {next_pot_1:,}", key="bet_hi", disabled=st.session_state.bust_state): 
+    if st.button(f"{label_1}\nx{odds_1:.2f}\nGet: {next_pot_1:,}", key="bet_hi", disabled=st.session_state.bust_state): 
         process_bet("Hi")
         st.rerun()
     # Red 버튼
-    if st.button(f"Red (♥♦)\nx{disp_odds_rb:.2f}\nGet: {next_pot_rb:,}", key="bet_red", disabled=st.session_state.bust_state): 
+    if st.button(f"Red (♥♦)\nx1.95\nGet: {next_pot_rb:,}", key="bet_red", disabled=st.session_state.bust_state): 
         process_bet("Red")
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
