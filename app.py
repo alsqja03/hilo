@@ -333,9 +333,9 @@ next_pot_rb = int(curr_pot * 1.95)
 
 # 총 투자금이 있어야 누적 배당률 계산 가능 (0으로 나누기 방지)
 if total_inv > 0:
-    disp_odds_1 = next_pot_1 / total_inv
-    disp_odds_2 = next_pot_2 / total_inv
-    disp_odds_rb = next_pot_rb / total_inv
+    disp_odds_1 = odds_1
+    disp_odds_2 = odds_2
+    disp_odds_rb = 1.95
 else:
     # 칩을 걸기 전이면 0.00 표시
     disp_odds_1 = 0.0
